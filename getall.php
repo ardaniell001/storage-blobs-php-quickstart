@@ -1,20 +1,20 @@
 <?php
 
 
-function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $destinationURL, $accesskey) {
+function getAll($storageAccount, $containerName, $destinationURL, $accesskey) {
 
     $currentDate = gmdate("D, d M Y H:i:s T", time());
-    $handle = fopen($filetoUpload, "r");
-    $fileLen = filesize($filetoUpload);
+    //$handle = fopen($filetoUpload, "r");
+    //$fileLen = filesize($filetoUpload);
 
     $headerResource = "x-ms-blob-cache-control:max-age=3600\nx-ms-blob-type:BlockBlob\nx-ms-date:$currentDate\nx-ms-version:2015-12-11";
-    $urlResource = "/$storageAccount/$containerName/$blobName";
+    //$urlResource = "/$storageAccount/$containerName/$blobName";
 
     $arraysign = array();
-    $arraysign[] = 'PUT';               /*HTTP Verb*/  
+    $arraysign[] = 'GET';               /*HTTP Verb*/  
     $arraysign[] = '';                  /*Content-Encoding*/  
     $arraysign[] = '';                  /*Content-Language*/  
-    $arraysign[] = $fileLen;            /*Content-Length (include value when zero)*/  
+    //$arraysign[] = $fileLen;            /*Content-Length (include value when zero)*/  
     $arraysign[] = '';                  /*Content-MD5*/  
     $arraysign[] = 'image/png';         /*Content-Type*/  
     $arraysign[] = '';                  /*Date*/  
@@ -24,7 +24,7 @@ function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $
     $arraysign[] = '';                  /*If-Unmodified-Since*/  
     $arraysign[] = '';                  /*Range*/  
     $arraysign[] = $headerResource;     /*CanonicalizedHeaders*/
-    $arraysign[] = $urlResource;        /*CanonicalizedResource*/
+    //$arraysign[] = $urlResource;        /*CanonicalizedResource*/
 
     $str2sign = implode("\n", $arraysign);
 
@@ -38,7 +38,7 @@ function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $
         'x-ms-date: ' . $currentDate,
         'x-ms-version: 2015-12-11',
         'Content-Type: image/png',
-        'Content-Length: ' . $fileLen
+        //'Content-Length: ' . $fileLen
     ];
 
     $ch = curl_init($destinationURL);
@@ -46,9 +46,9 @@ function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_setopt($ch, CURLOPT_INFILE, $handle); 
-    curl_setopt($ch, CURLOPT_INFILESIZE, $fileLen); 
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+    //curl_setopt($ch, CURLOPT_INFILE, $handle); 
+    //curl_setopt($ch, CURLOPT_INFILESIZE, $fileLen); 
     curl_setopt($ch, CURLOPT_UPLOAD, true); 
     $result = curl_exec($ch);
 
@@ -61,36 +61,14 @@ function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $
     curl_close($ch);
 }
 
-if (isset($_POST['submit'])) {
-	var_dump($_FILES['fileToUpload']);
-	$accesskey = "3sdAuj6Y/H26ZrksJ3fIUJsGyOsbEhoyY91O0VPpwpCdcSl68mSOs13qhClDHJQA4cgEX9ACzKHaJgl7xqJ1AQ==";
-	$storageAccount = 'danildicoding';
-	$filetoUpload = $_FILES["fileToUpload"]["tmp_name"];
-	$containerName = 'danildicodingcontainer';
-	$blobName = $_FILES["fileToUpload"]["name"];
+$accesskey = "3sdAuj6Y/H26ZrksJ3fIUJsGyOsbEhoyY91O0VPpwpCdcSl68mSOs13qhClDHJQA4cgEX9ACzKHaJgl7xqJ1AQ==";
+$storageAccount = 'danildicoding';
+//$filetoUpload = $_FILES["fileToUpload"]["tmp_name"];
+$containerName = 'danildicodingcontainer';
+//$blobName = $_FILES["fileToUpload"]["name"];
 
-	$destinationURL = "https://$storageAccount.blob.core.windows.net/$containerName/$blobName";
+$destinationURL = "https://danildicoding.blob.core.windows.net/danildicodingcontainer";
 
-	uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $destinationURL, $accesskey);
-}
+getAll($storageAccount, $containerName, $destinationURL, $accesskey);
 
 ?>
-
-<!DOCTYPE html>
-<html>
-<body>
-
-<div>
-	<form action="index.php" method="post" enctype="multipart/form-data">
-	    Select image to upload:
-	    <input type="file" name="fileToUpload" id="fileToUpload">
-	    <input type="submit" value="Upload Image" name="submit">
-	</form>
-</div>
-
-<div>
-	
-</div>
-
-</body>
-</html>
