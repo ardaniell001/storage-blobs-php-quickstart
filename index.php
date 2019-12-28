@@ -60,10 +60,10 @@ function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $
     $result = curl_exec($ch);
 
     echo ('Result<br/>');
-    print_r($result);
+    var_dump($result);
 
     echo ('Error<br/>');
-    print_r(curl_error($ch));
+    var_dump(curl_error($ch));
 
     curl_close($ch);
 }
