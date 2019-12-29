@@ -1,79 +1,24 @@
 <?php
+require_once 'vendor/autoload.php';
+require_once "./random_string.php";
 
+use MicrosoftAzure\Storage\Blob\BlobRestProxy;
+use MicrosoftAzure\Storage\Common\Exceptions\ServiceException;
+use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
+use MicrosoftAzure\Storage\Blob\Models\CreateContainerOptions;
+use MicrosoftAzure\Storage\Blob\Models\PublicAccessType;
 
-function uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $destinationURL, $accesskey) {
+$connectionString = "DefaultEndpointsProtocol=https;AccountName=danildicoding;AccountKey=3sdAuj6Y/H26ZrksJ3fIUJsGyOsbEhoyY91O0VPpwpCdcSl68mSOs13qhClDHJQA4cgEX9ACzKHaJgl7xqJ1AQ==";
+$containerName = "danildicodingcontainer";
+// Create blob client.
+$blobClient = BlobRestProxy::createBlobService($connectionString);
 
-    $currentDate = gmdate("D, d M Y H:i:s T", time());
-    $handle = fopen($filetoUpload, "r");
-    $fileLen = filesize($filetoUpload);
-
-    $headerResource = "x-ms-blob-cache-control:max-age=3600\nx-ms-blob-type:BlockBlob\nx-ms-date:$currentDate\nx-ms-version:2015-12-11";
-    $urlResource = "/$storageAccount/$containerName/$blobName";
-
-    $arraysign = array();
-    $arraysign[] = 'PUT';               /*HTTP Verb*/  
-    $arraysign[] = '';                  /*Content-Encoding*/  
-    $arraysign[] = '';                  /*Content-Language*/  
-    $arraysign[] = $fileLen;            /*Content-Length (include value when zero)*/  
-    $arraysign[] = '';                  /*Content-MD5*/  
-    $arraysign[] = 'image/png';         /*Content-Type*/  
-    $arraysign[] = '';                  /*Date*/  
-    $arraysign[] = '';                  /*If-Modified-Since */  
-    $arraysign[] = '';                  /*If-Match*/  
-    $arraysign[] = '';                  /*If-None-Match*/  
-    $arraysign[] = '';                  /*If-Unmodified-Since*/  
-    $arraysign[] = '';                  /*Range*/  
-    $arraysign[] = $headerResource;     /*CanonicalizedHeaders*/
-    $arraysign[] = $urlResource;        /*CanonicalizedResource*/
-
-    $str2sign = implode("\n", $arraysign);
-
-    $sig = base64_encode(hash_hmac('sha256', urldecode(utf8_encode($str2sign)), base64_decode($accesskey), true));  
-    $authHeader = "SharedKey $storageAccount:$sig";
-
-    $headers = [
-        'Authorization: ' . $authHeader,
-        'x-ms-blob-cache-control: max-age=3600',
-        'x-ms-blob-type: BlockBlob',
-        'x-ms-date: ' . $currentDate,
-        'x-ms-version: 2015-12-11',
-        'Content-Type: image/png',
-        'Content-Length: ' . $fileLen
-    ];
-
-    $ch = curl_init($destinationURL);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_setopt($ch, CURLOPT_INFILE, $handle); 
-    curl_setopt($ch, CURLOPT_INFILESIZE, $fileLen); 
-    curl_setopt($ch, CURLOPT_UPLOAD, true); 
-    $result = curl_exec($ch);
-
-    echo ('Result<br/>');
-    var_dump($result);
-
-    echo ('Error<br/>');
-    var_dump(curl_error($ch));
-
-    curl_close($ch);
-}
 
 if (isset($_POST['submit'])) {
-	var_dump($_FILES['fileToUpload']);
-	$accesskey = "3sdAuj6Y/H26ZrksJ3fIUJsGyOsbEhoyY91O0VPpwpCdcSl68mSOs13qhClDHJQA4cgEX9ACzKHaJgl7xqJ1AQ==";
-	$storageAccount = 'danildicoding';
-	$filetoUpload = $_FILES["fileToUpload"]["tmp_name"];
-	$containerName = 'danildicodingcontainer';
-	$blobName = $_FILES["fileToUpload"]["name"];
-
-	$destinationURL = "https://$storageAccount.blob.core.windows.net/$containerName/$blobName";
-
-	uploadBlob($filetoUpload, $storageAccount, $containerName, $blobName, $destinationURL, $accesskey);
+    $fileToUpload = $_FILES['fileToUpload']['name'];
+    $content = fopen($_FILES['fileToUpload']['tmp_name'].'', "r");
+    $blobClient->createBlockBlob($containerName, $fileToUpload, $content);
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -83,13 +28,39 @@ if (isset($_POST['submit'])) {
 <div>
 	<form action="index.php" method="post" enctype="multipart/form-data">
 	    Select image to upload:
-	    <input type="file" name="fileToUpload" id="fileToUpload">
+	    <input type="file" name="fileToUpload" id="fileToUpload" accept="image/x-png,image/jpeg">
 	    <input type="submit" value="Upload Image" name="submit">
 	</form>
 </div>
 
-<div>
-	
+<div style="margin-top: 30px">
+    <?php
+        // List blobs.
+        $listBlobsOptions = new ListBlobsOptions();
+
+        echo "These are the blobs present in the container: ";
+
+        do{
+            $result = $blobClient->listBlobs($containerName, $listBlobsOptions);
+            foreach ($result->getBlobs() as $blob)
+            {
+                ?>
+                    <div style="margin-top: 20px">
+                        <img src="<?php echo $blob->getUrl() ?>" width="150px">
+                        <b><?= $blob->getName() ?></b>
+                        <form action="computervision.php" method="post">
+                            <input type="hidden" name="data" value="<?= $blob->getUrl() ?>">
+                            <input type="submit" name="submit" value="Analyze Image">
+                        </form>
+                        <hr>
+                    </div>
+                <?php
+            }
+
+            $listBlobsOptions->setContinuationToken($result->getContinuationToken());
+        } while($result->getContinuationToken());
+        echo "<br />";
+    ?>
 </div>
 
 </body>
